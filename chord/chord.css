@@ -1,0 +1,23 @@
+body {
+   font-family: Arial;
+   font-size: 69%;
+}
+
+#footer {
+   border-top: 1px solid #F0F0F0;
+   color: #666666;
+}
+
+#chart {
+  font: 10px sans-serif;
+}
+
+.select {
+  font-weight: bold;
+}
+
+.chord path {
+  fill-opacity: .67;
+  stroke: #000;
+  stroke-width: .5px;
+}

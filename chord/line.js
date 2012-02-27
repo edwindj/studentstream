@@ -31,7 +31,7 @@ var labels = ["Basisonderwijs"
 , "Uitstroom"
 ];
 
-var idx = 0;
+var idx = 1;
 
 var foc = { label:labels[idx]
           , index: idx
@@ -49,36 +49,39 @@ d.total = d3.sum(d.in) + d3.sum(d.out) + foc.value;
 function filterstr(o) {return o.value > 0;}
 
 d.sin = d.in.map(function(d, i) {return {label:labels[i], index: i, value: d}}).filter(filterstr);
-d.sin = d.sin.concat(foc);
+d.sin = [foc].concat(d.sin);
 
 d.sout = d.out.map(function(d, i) {return {label:labels[i], index: i, value: d}}).filter(filterstr);
-d.sout = [foc].concat(d.sout);
-
-var offset = 0;
-var d_offset = d.in.map(function(x){ offset += x; return offset-x/2;});
+d.sout = d.sout.concat(foc);
 
 var n = labels.length;
 var sc = {};
 
 sc.x = d3.scale.linear()
          .domain([0,2])
-		 .range([0,w]);
+		 .range([-w/2,w/2]);
 sc.y = d3.scale.linear()
-         .domain([0,d.total])
+         .domain([0,d.total * 1.5])
 		 .range([h/2,-h/2]);
 sc.fill = d3.scale.category20()
-    .domain(d3.range(n));
+            .domain(d3.range(n));
 	
-var offset = 0;
-p_in = d.sin.map(function(s){ s.offset = offset ; offset += s.value + 10; return s;});
+var offset = d3.sum(d.out);
+
+p_in = d.sin.map(function(s){ s.offset = offset ; offset += s.value; return s;});
 
 var line = d3.svg.line();
-function path(val, os){
-   return line([ [sc.x(0), sc.y(0 + os)]
-               , [sc.x(1), sc.y(0 + os)]
-			   , [sc.x(1), sc.y(val + os)]
-			   , [sc.x(0), sc.y(val + os)]
-			   ]);
+function path(val, os, i){
+   var l = [ [0, os + i*10]
+           , [0.1, os + i*10]
+		   , [0.9, os]
+           , [1, os]
+           , [1, val + os]
+		   , [0.9, val + os]
+		   , [0.1, val + os + i*10]
+		   , [0, val + os + i *10]
+		   ].map(function(p) {return [sc.x(p[0]), sc.y(p[1])]});
+   return line(l);
 }
 
 
@@ -95,8 +98,9 @@ svg.append("svg:g")
    .data(d.sin)
    .enter().append("svg:path")
    .style("fill", function(d) {return sc.fill(d.index)})
+   .attr("xlink:title", function(d){return d.value*1000})
    .attr("d", function(d,i) {
-      return path(d.value, d.offset);
+      return path(d.value, d.offset,i);
 	  })
    ;
 
@@ -129,9 +133,9 @@ legend.append("svg:text")
 /** Returns an event handler for fading a given chord group. */
 function fadeGroup(opacity) {
   return function(g, i) {
-    svg.selectAll("g.chord path")
+    svg.selectAll("g.in path")
         .filter(function(d) {
-          return d.source.index != i && d.target.index != i;
+          return d.index != i;
         })
       .transition()
         .attr("opacity", opacity);

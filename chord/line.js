@@ -33,31 +33,72 @@ var labels = ["Basisonderwijs"
 
 var idx = 0;
 
+var foc = { label:labels[idx]
+          , index: idx
+		  , value: m[idx][idx]
+          }
+
+// set value to zero
+m[idx][idx] = 0;
+
 var d = {};
 d.out = m[idx]
 d.in = d3.transpose(m)[idx]
-d.total = d3.sum(d.in) + d3.sum(d.out) - d.in[idx];
+d.total = d3.sum(d.in) + d3.sum(d.out) + foc.value;
 
-d.sin = d.in.map(function(d, i) {return {label:labels[i], index: i, value: d}}).filter(function(o){return o.value > 0;});
+function filterstr(o) {return o.value > 0;}
 
-d.sout = d.out.map(function(d, i) {return {label:labels[i], index: i, value: d}}).filter(function(o){return o.value > 0;});
+d.sin = d.in.map(function(d, i) {return {label:labels[i], index: i, value: d}}).filter(filterstr);
+d.sin = d.sin.concat(foc);
+
+d.sout = d.out.map(function(d, i) {return {label:labels[i], index: i, value: d}}).filter(filterstr);
+d.sout = [foc].concat(d.sout);
 
 var offset = 0;
 var d_offset = d.in.map(function(x){ offset += x; return offset-x/2;});
 
 var n = labels.length;
 var sc = {};
-sc.x = d3.scale.linear();
+
+sc.x = d3.scale.linear()
+         .domain([0,2])
+		 .range([0,w]);
+sc.y = d3.scale.linear()
+         .domain([0,d.total])
+		 .range([h/2,-h/2]);
 sc.fill = d3.scale.category20()
     .domain(d3.range(n));
 	
-    
+var offset = 0;
+p_in = d.sin.map(function(s){ s.offset = offset ; offset += s.value + 10; return s;});
+
+var line = d3.svg.line();
+function path(val, os){
+   return line([ [sc.x(0), sc.y(0 + os)]
+               , [sc.x(1), sc.y(0 + os)]
+			   , [sc.x(1), sc.y(val + os)]
+			   , [sc.x(0), sc.y(val + os)]
+			   ]);
+}
+
+
 var svg = d3.select("#chart")
   .append("svg:svg")
     .attr("width", w+200)
     .attr("height", h)
   .append("svg:g")
     .attr("transform", "translate(" + w / 2 + "," + h / 2 + ")");
+	
+svg.append("svg:g")
+   .attr("class","in")
+   .selectAll("path")
+   .data(d.sin)
+   .enter().append("svg:path")
+   .style("fill", function(d) {return sc.fill(d.index)})
+   .attr("d", function(d,i) {
+      return path(d.value, d.offset);
+	  })
+   ;
 
 svg.append("svg:g")
 var legend = svg.append("svg:g")

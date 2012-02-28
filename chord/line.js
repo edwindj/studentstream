@@ -31,19 +31,19 @@ var labels = ["Basisonderwijs"
 , "Uitstroom"
 ];
 
-var idx = 1;
+var idx = 2;
 
 var foc = { label:labels[idx]
           , index: idx
-		  , value: m[idx][idx]
+		    , value: m[idx][idx]
           }
 
 // set value to zero
 m[idx][idx] = 0;
 
 var d = {};
-d.out = m[idx]
-d.in = d3.transpose(m)[idx]
+d.out = m[idx];
+d.in = d3.transpose(m)[idx];
 d.total = d3.sum(d.in) + d3.sum(d.out) + foc.value;
 
 function filterstr(o) {return o.value > 0;}
@@ -52,38 +52,54 @@ d.sin = d.in.map(function(d, i) {return {label:labels[i], index: i, value: d}}).
 d.sin = [foc].concat(d.sin);
 
 d.sout = d.out.map(function(d, i) {return {label:labels[i], index: i, value: d}}).filter(filterstr);
-d.sout = d.sout.concat(foc);
+d.sout = [foc].concat(d.sout);
 
 var n = labels.length;
 var sc = {};
 
 sc.x = d3.scale.linear()
          .domain([0,2])
-		 .range([-w/2,w/2]);
+		   .range([-w/2,w/2]);
 sc.y = d3.scale.linear()
-         .domain([0,d.total * 1.5])
-		 .range([h/2,-h/2]);
+         .domain([0,d.total])
+		   .range([h/2 - 10 * (d.sin.length-1),-h/2 + 10 * (d.sout.length-1)]);
 sc.fill = d3.scale.category20()
             .domain(d3.range(n));
 	
 var offset = d3.sum(d.out);
-
 p_in = d.sin.map(function(s){ s.offset = offset ; offset += s.value; return s;});
 
+var offset = d3.sum(d.out);
+p_out = d.sout.map(function(s){ s.offset = offset ; offset -= s.value; return s;});
+
+var gap = sc.y.invert(10);
 var line = d3.svg.line();
-function path(val, os, i){
-   var l = [ [0, os + i*10]
-           , [0.1, os + i*10]
-		   , [0.9, os]
-           , [1, os]
-           , [1, val + os]
-		   , [0.9, val + os]
-		   , [0.1, val + os + i*10]
-		   , [0, val + os + i *10]
-		   ].map(function(p) {return [sc.x(p[0]), sc.y(p[1])]});
+
+function path_in(val, os, i){
+   var l = [ [0, i*gap]
+           , [0.1, i*gap]
+		     , [0.9, 0]
+           , [1, 0]
+           , [1, val]
+		     , [0.9, val]
+		     , [0.1, val + i*gap]
+		     , [0, val + i*gap]
+		     ].map(function(p) {return [sc.x(p[0]), sc.y(p[1] + os)]});
    return line(l);
 }
 
+function path_out(val, os, i){
+   var l = [ [2, i*gap]
+           , [1.9, i*gap]
+		     , [1.1, 0]
+           , [1, 0]
+           , [1, val]
+		     , [1.1, val]
+		     , [1.9, val + i*gap]
+		     , [2, val + i*gap]
+		     ].map(function(p) {return [sc.x(p[0]), sc.y(-p[1] + os)]});
+   return line(l);
+}
 
 var svg = d3.select("#chart")
   .append("svg:svg")
@@ -95,12 +111,24 @@ var svg = d3.select("#chart")
 svg.append("svg:g")
    .attr("class","in")
    .selectAll("path")
-   .data(d.sin)
+   .data(p_in)
    .enter().append("svg:path")
    .style("fill", function(d) {return sc.fill(d.index)})
    .attr("xlink:title", function(d){return d.value*1000})
    .attr("d", function(d,i) {
-      return path(d.value, d.offset,i);
+      return path_in(d.value, d.offset,i);
+	  })
+   ;
+
+svg.append("svg:g")
+   .attr("class","out")
+   .selectAll("path")
+   .data(p_out)
+   .enter().append("svg:path")
+   .style("fill", function(d) {return sc.fill(d.index)})
+   .attr("xlink:title", function(d){return d.value*1000})
+   .attr("d", function(d,i) {
+      return path_out(d.value, d.offset,i);
 	  })
    ;
 

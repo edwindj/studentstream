@@ -31,7 +31,7 @@ var labels = ["Basisonderwijs"
 , "Uitstroom"
 ];
 
-var idx = 2;
+var idx = 0;
 
 var foc = { label:labels[idx]
           , index: idx
@@ -44,7 +44,14 @@ m[idx][idx] = 0;
 var d = {};
 d.out = m[idx];
 d.in = d3.transpose(m)[idx];
+
+var foc_out = { label:foc.label
+              , index: foc.index
+		        , value: d3.sum(d.in)
+              }
+
 d.total = d3.sum(d.in) + d3.sum(d.out) + foc.value;
+
 
 function filterstr(o) {return o.value > 0;}
 
@@ -52,28 +59,28 @@ d.sin = d.in.map(function(d, i) {return {label:labels[i], index: i, value: d}}).
 d.sin = [foc].concat(d.sin);
 
 d.sout = d.out.map(function(d, i) {return {label:labels[i], index: i, value: d}}).filter(filterstr);
-d.sout = [foc].concat(d.sout);
+d.sout = [foc_out].concat(d.sout);
 
 var n = labels.length;
 var sc = {};
 
 sc.x = d3.scale.linear()
          .domain([0,2])
-		   .range([-w/2,w/2]);
+		   .range([0,w]);
 sc.y = d3.scale.linear()
          .domain([0,d.total])
-		   .range([h/2 - 10 * (d.sin.length-1),-h/2 + 10 * (d.sout.length-1)]);
+		   .rangeRound([h - 10 * (d.sout.length-1), 10 * (d.sin.length-1)]);
 sc.fill = d3.scale.category20()
             .domain(d3.range(n));
 	
 var offset = d3.sum(d.out);
-p_in = d.sin.map(function(s){ s.offset = offset ; offset += s.value; return s;});
+p_in = d.sin.map(function(s){ s.offset_i = offset; offset += s.value; return s;});
 
-var offset = d3.sum(d.out);
-p_out = d.sout.map(function(s){ s.offset = offset ; offset -= s.value; return s;});
+var offset = d.total;
+p_out = d.sout.map(function(s){ s.offset_o = offset ; offset -= s.value; return s;});
 
-var gap = sc.y.invert(10);
-var line = d3.svg.line();
+var gap = sc.y.invert(sc.y.range()[0] - 10);
+var line = d3.svg.line();           
 
 function path_in(val, os, i){
    var l = [ [0, i*gap]
@@ -104,9 +111,7 @@ function path_out(val, os, i){
 var svg = d3.select("#chart")
   .append("svg:svg")
     .attr("width", w+200)
-    .attr("height", h)
-  .append("svg:g")
-    .attr("transform", "translate(" + w / 2 + "," + h / 2 + ")");
+    .attr("height", h);
 	
 svg.append("svg:g")
    .attr("class","in")
@@ -116,7 +121,7 @@ svg.append("svg:g")
    .style("fill", function(d) {return sc.fill(d.index)})
    .attr("xlink:title", function(d){return d.value*1000})
    .attr("d", function(d,i) {
-      return path_in(d.value, d.offset,i);
+      return path_in(d.value, d.offset_i,i);
 	  })
    ;
 
@@ -128,7 +133,7 @@ svg.append("svg:g")
    .style("fill", function(d) {return sc.fill(d.index)})
    .attr("xlink:title", function(d){return d.value*1000})
    .attr("d", function(d,i) {
-      return path_out(d.value, d.offset,i);
+      return path_out(d.value, d.offset_o    ,i);
 	  })
    ;
 
@@ -139,7 +144,7 @@ var legend = svg.append("svg:g")
    .data(labels)
    .enter().append("svg:g")
    .attr("id", function(d, i) {return "label" + i})
-   .attr("transform", function(d,i) {return "translate(300, "+ (25*i-300) +")"})
+   .attr("transform", function(d,i) {return "translate(600, "+ (25*i) +")"})
    .on("mouseover", fadeGroup(.1))
    .on("mouseout", fadeGroup(1))
    ;
